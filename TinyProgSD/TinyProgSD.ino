@@ -4,15 +4,17 @@
 #define SCL_PIN 3
 #define ADDR    0x01
 
-TinyWire::SlaveInterface i2c(SDA_PIN, SCL_PIN);
 char dataBuff[8];
 
 void setup() {
+    TinyWire::interfaceMask.sdaMask = 0x01 << SDA_PIN;
+    TinyWire::interfaceMask.sclMask = 0x01 << SCL_PIN;
+
     dataBuff[0] = 0x00;
     while(dataBuff[0] != '?') {
-        i2c.read(ADDR);
+        TinyWire::AsSlave::read(ADDR);
     }
-    i2c.write(ADDR, 'R');
+    TinyWire::AsSlave::write(ADDR, 'R');
 }
 
 void loop() {

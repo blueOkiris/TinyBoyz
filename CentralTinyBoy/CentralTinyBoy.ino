@@ -9,17 +9,19 @@
 
 char registers[4] = { 0, 0, 0, 0 };
 unsigned char dataBuffer[8];
-TinyWire::MasterInterface i2c(SDA_PIN, SCL_PIN);
 
 void waitForSdReady() {
     dataBuffer[0] = 0x00;
     while(dataBuffer[0] != 'R') {
-        i2c.write(SD_ADDR, '?');
-        dataBuffer[0] = i2c.read(SD_ADDR);
+        TinyWire::AsMaster::write(SD_ADDR, '?');
+        dataBuffer[0] = TinyWire::AsMaster::read(SD_ADDR);
     }
 }
 
 void setup() {
+    TinyWire::interfaceMask.sdaMask = 0x01 << SDA_PIN;
+    TinyWire::interfaceMask.sclMask = 0x01 << SCL_PIN;
+    
     waitForSdReady();
 }
 
