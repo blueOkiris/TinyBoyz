@@ -9,6 +9,7 @@ char dataBuff[8];
 void setup() {
     TinyWire::interfaceMask.sdaMask = 0x01 << SDA_PIN;
     TinyWire::interfaceMask.sclMask = 0x01 << SCL_PIN;
+    TinyWire::AsSlave::initInterface();
 
     dataBuff[0] = 0x00;
     while(dataBuff[0] != '?') {

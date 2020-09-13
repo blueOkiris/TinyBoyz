@@ -7,6 +7,7 @@
 void setup() {
     TinyWire::interfaceMask.sdaMask = 0x01 << SDA_PIN;
     TinyWire::interfaceMask.sclMask = 0x01 << SCL_PIN;
+    TinyWire::AsSlave::initInterface();
 }
 
 void loop() {
