@@ -1,5 +1,5 @@
 # Build options
-SKETCHES :=        CentralTinyBoy TinyDisplay TinyFram TinyInput TinyProgSD
+SKETCHES :=        CentralTinyBoy TinyDisplay TinyInput TinyProgSD
 BOARD :=           attiny:avr:ATtinyX5
 BOARD_NAME =       $(subst :,.,$(BOARD))
 PORT :=            /dev/ttyACM0
