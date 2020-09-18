@@ -112,8 +112,22 @@ void spiFill16(uint16_t data, uint32_t len) {
     PORTB &= ~maskCs;
     PORTB |= maskCd;
     for(uint32_t i = 0; i < len; i++) {
-        spiWrite(data >> 8);
-        spiWrite(data & 0x00FF);
+        //spiWrite(data >> 8);
+        //spiWrite(data & 0x00FF);
+        for(int8_t bit = 7; bit >= 0; bit--) {
+            PORTB = (((data >> 8) >> bit) & 0x01) ?
+                (PORTB | maskMosi) :
+                (PORTB & ~maskMosi);
+            PORTB |= maskScl;
+            PORTB &= ~maskScl;
+        }
+        for(int8_t bit = 7; bit >= 0; bit--) {
+            PORTB = (((data & 0x00FF) >> bit) & 0x01) ?
+                (PORTB | maskMosi) :
+                (PORTB & ~maskMosi);
+            PORTB |= maskScl;
+            PORTB &= ~maskScl;
+        }
     }
     spiWrite(0x00);
     PORTB |= maskCs;
@@ -123,7 +137,13 @@ void spiFill8(uint8_t data, uint32_t len) {
     PORTB &= ~maskCs;
     PORTB |= maskCd;
     for(uint32_t i = 0; i < len; i++) {
-        spiWrite(data);
+        for(int8_t bit = 7; bit >= 0; bit--) {
+            PORTB = ((data >> bit) & 0x01) ?
+                (PORTB | maskMosi) :
+                (PORTB & ~maskMosi);
+            PORTB |= maskScl;
+            PORTB &= ~maskScl;
+        }
     }
     spiWrite(0x00);
     PORTB |= maskCs;
