@@ -1,6 +1,6 @@
 # Build options
 SKETCHES :=        CentralTinyBoy TinyDisplay TinyInput TinyProgSD
-BOARD :=           attiny:avr:ATtinyX5:cpu=attiny85,clock=internal8
+BOARD :=           attiny:avr:ATtinyX5:cpu=attiny85,clock=internal16
 BOARD_NAME =       $(subst :,.,$(BOARD))
 PORT :=            /dev/ttyACM0
 ASC :=             arduino

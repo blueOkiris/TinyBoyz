@@ -1,7 +1,7 @@
 #define PIN_MOSI            1
-#define PIN_SCL             2
+#define PIN_SCL             0
 #define PIN_CS              3
-#define PIN_CD              0
+#define PIN_CD              2
 
 #define ILI_RST             0x01
 #define ILI_PW_CTL_1        0xC0
@@ -73,6 +73,8 @@ const uint8_t iliInitCmds[110] = {
     ILI_DISP_ON, 0x80,                      // Display on
 };
 
+uint8_t maskMosi, maskScl, maskCd, maskCs;
+
 void setup() {
     dispInit();
     dispFillRect(0, 0, 320, 240, BLACK);
@@ -107,10 +109,15 @@ void dispFillRect(
 }
 
 void dispWriteColor(uint16_t color, uint32_t len) {
+    PORTB &= ~maskCs;
+    PORTB |= maskCd;
     for(uint32_t i = 0; i < len; i++) {
-        spiSendData16(color);
+        //spiSendData16(color);
+        spiWrite(color >> 8);
+        spiWrite(color & 0x00FF);
     }
-    spiSendData8(0x00);
+    spiWrite(0x00);
+    PORTB |= maskCs;
 }
 
 void dispSetAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
@@ -127,55 +134,62 @@ void dispSetAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
 }
 
 void spiInit() {
-    pinMode(PIN_MOSI, OUTPUT);
-    pinMode(PIN_SCL, OUTPUT);
-    pinMode(PIN_CS, OUTPUT);
-    pinMode(PIN_CD, OUTPUT);
+    maskMosi = 0x01 << PIN_MOSI;
+    maskScl = 0x01 << PIN_SCL;
+    maskCs = 0x01 << PIN_CS;
+    maskCd = 0x01 << PIN_CD;
 
-    digitalWrite(PIN_CS, HIGH);
-    digitalWrite(PIN_SCL, LOW);
+    DDRB |= maskMosi;
+    DDRB |= maskScl;
+    DDRB |= maskCs;
+    DDRB |= maskCd;
+
+    PORTB |= maskCs;
+    PORTB &= ~maskScl;
 }
 
 void spiSendData16(uint16_t data) {
-    digitalWrite(PIN_CS, LOW);
-    digitalWrite(PIN_CD, HIGH);
+    PORTB &= ~maskCs;
+    PORTB |= maskCd;
     spiWrite(data >> 8);
     spiWrite(data & 0x00FF);
-    digitalWrite(PIN_CS, HIGH);
+    PORTB |= maskCs;
 }
 
 void spiSendData8(uint8_t data) {
-    digitalWrite(PIN_CS, LOW);
-    digitalWrite(PIN_CD, HIGH);
+    PORTB &= ~maskCs;
+    PORTB |= maskCd;
     spiWrite(data);
-    digitalWrite(PIN_CS, HIGH);
+    PORTB |= maskCs;
 }
 
 void spiSendCommand(uint8_t cmd, uint8_t *data, uint8_t len) {
-    digitalWrite(PIN_CS, LOW);
+    PORTB &= ~maskCs;
 
-    digitalWrite(PIN_CD, LOW);
+    PORTB &= ~maskCd;
     spiWrite(cmd);
 
-    digitalWrite(PIN_CD, HIGH);
+    PORTB |= maskCd;
     for(uint8_t i = 0; i < len; i++) {
         spiWrite(data[i]);
     }
 
-    digitalWrite(PIN_CS, HIGH);
+    PORTB |= maskCs;
 }
 
 void spiSendCommand(uint8_t cmd) {
-    digitalWrite(PIN_CS, LOW);
-    digitalWrite(PIN_CD, LOW);
+    PORTB &= ~maskCs;
+    PORTB &= ~maskCd;
     spiWrite(cmd);
-    digitalWrite(PIN_CS, HIGH);
+    PORTB |= maskCs;
 }
 
 void spiWrite(uint8_t byte) {
     for(int8_t bit = 7; bit >= 0; bit--) {
-        digitalWrite(PIN_MOSI, (byte >> bit) & 0x01);
-        digitalWrite(PIN_SCL, HIGH);
-        digitalWrite(PIN_SCL, LOW);
+        PORTB = ((byte >> bit) & 0x01) ?
+            (PORTB | maskMosi) :
+            (PORTB & ~maskMosi);
+        PORTB |= maskScl;
+        PORTB &= ~maskScl;
     }
 }
