@@ -3,6 +3,7 @@
 #include "TinySpi.hpp"
 
 using namespace Display;
+
 void Display::init() {
     Spi::init();
 
