@@ -75,150 +75,133 @@ const uint8_t iliInitCmds[110] = {
 
 uint8_t maskMosi, maskScl, maskCd, maskCs;
 
+namespace Spi {
+    void init() {
+        maskMosi = 0x01 << PIN_MOSI;
+        maskScl = 0x01 << PIN_SCL;
+        maskCs = 0x01 << PIN_CS;
+        maskCd = 0x01 << PIN_CD;
+
+        DDRB |= maskMosi;
+        DDRB |= maskScl;
+        DDRB |= maskCs;
+        DDRB |= maskCd;
+
+        PORTB |= maskCs;
+        PORTB &= ~maskScl;
+    }
+
+    void writeByte(uint8_t byte) {
+        for(int8_t bit = 7; bit >= 0; bit--) {
+            PORTB = ((byte >> bit) & 0x01) ?
+                (PORTB | maskMosi) :
+                (PORTB & ~maskMosi);
+            PORTB |= maskScl;
+            PORTB &= ~maskScl;
+        }
+    }
+
+    void sendCommand(uint8_t cmd, uint8_t *data, uint8_t len) {
+        PORTB &= ~maskCs;
+
+        PORTB &= ~maskCd;
+        writeByte(cmd);
+
+        PORTB |= maskCd;
+        for(uint8_t i = 0; i < len; i++) {
+            writeByte(data[i]);
+        }
+
+        PORTB |= maskCs;
+    }
+
+    void sendCommand(uint8_t cmd) {
+        PORTB &= ~maskCs;
+        PORTB &= ~maskCd;
+        writeByte(cmd);
+        PORTB |= maskCs;
+    }
+
+    void fillRam16(uint16_t data, uint32_t len) {
+        PORTB &= ~maskCs;
+
+        PORTB &= ~maskCd;
+        writeByte(ILI_RAM_WRITE);
+
+        uint8_t hi = data >> 8;
+        uint8_t lo = data & 0x00FF;
+
+        PORTB |= maskCd;
+        for(uint32_t i = 0; i < len; i++) {
+            for(int8_t bit = 7; bit >= 0; bit--) {
+                PORTB = ((hi >> bit) & 0x01) ?
+                    (PORTB | maskMosi) :
+                    (PORTB & ~maskMosi);
+                PORTB |= maskScl;
+                PORTB &= ~maskScl;
+            }
+            for(int8_t bit = 7; bit >= 0; bit--) {
+                PORTB = ((lo >> bit) & 0x01) ?
+                    (PORTB | maskMosi) :
+                    (PORTB & ~maskMosi);
+                PORTB |= maskScl;
+                PORTB &= ~maskScl;
+            }
+        }
+
+        PORTB &= ~maskMosi;
+        for(int8_t bit = 7; bit >= 0; bit--) {
+            PORTB |= maskScl;
+            PORTB &= ~maskScl;
+        }
+
+        PORTB |= maskCs;
+    }
+}
+
+namespace Display {
+    void init() {
+        Spi::init();
+
+        Spi::sendCommand(ILI_RST);
+        delay(150);
+
+        for(uint8_t ind = 0; ind < 110; ind++) {
+            uint8_t cmd = iliInitCmds[ind++];
+            uint8_t numData = iliInitCmds[ind++];
+            Spi::sendCommand(cmd, iliInitCmds + ind, numData & 0x7F);
+            if(numData & 0x80) {
+                delay(100);
+            }
+            ind += (numData & 0x7F) - 1;
+        }
+    }
+
+    void setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
+        uint16_t x2 = (x1 + w - 1), y2 = (y1 + h - 1);
+        uint8_t dataX[4] = {
+            x1 >> 8, x1 & 0x00FF, x2 >> 8, x2 & 0x00FF
+        };
+        uint8_t dataY[4] = {
+            y1 >> 8, y1 & 0x00FF, y2 >> 8, y2 & 0x00FF
+        };
+        Spi::sendCommand(ILI_COL_ADDR_SET, dataX, 4);
+        Spi::sendCommand(ILI_PG_ADDR_SET, dataY, 4);
+    }
+
+    void fillRect(
+            uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
+        setAddrWindow(x, y, w, h);
+        Spi::fillRam16(color, (uint32_t ) w * h);
+    }
+}
+
 void setup() {
-    dispInit();
-    dispFillRect(0, 0, 320, 240, BLACK);
-    dispFillRect(50, 50, 50, 50, BLUE);
+    Display::init();
+    Display::fillRect(0, 0, 320, 240, BLACK);
+    Display::fillRect(50, 50, 50, 50, BLUE);
 }
 
 void loop() {
 
-}
-
-void dispInit() {
-    spiInit();
-
-    spiSendCommand(ILI_RST);
-    delay(150);
-
-    for(uint8_t ind = 0; ind < 110; ind++) {
-        uint8_t cmd = iliInitCmds[ind++];
-        uint8_t numData = iliInitCmds[ind++];
-        spiSendCommand(cmd, iliInitCmds + ind, numData & 0x7F);
-        if(numData & 0x80) {
-            delay(100);
-        }
-        ind += (numData & 0x7F) - 1;
-    }
-}
-
-void dispFillRect(
-        uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
-    dispSetAddrWindow(x, y, w, h);
-    spiFill16(color, (uint32_t) w * h);
-}
-
-void spiFill16(uint16_t data, uint32_t len) {
-    PORTB &= ~maskCs;
-    PORTB |= maskCd;
-    for(uint32_t i = 0; i < len; i++) {
-        //spiWrite(data >> 8);
-        //spiWrite(data & 0x00FF);
-        for(int8_t bit = 7; bit >= 0; bit--) {
-            PORTB = (((data >> 8) >> bit) & 0x01) ?
-                (PORTB | maskMosi) :
-                (PORTB & ~maskMosi);
-            PORTB |= maskScl;
-            PORTB &= ~maskScl;
-        }
-        for(int8_t bit = 7; bit >= 0; bit--) {
-            PORTB = (((data & 0x00FF) >> bit) & 0x01) ?
-                (PORTB | maskMosi) :
-                (PORTB & ~maskMosi);
-            PORTB |= maskScl;
-            PORTB &= ~maskScl;
-        }
-    }
-    spiWrite(0x00);
-    PORTB |= maskCs;
-}
-
-void spiFill8(uint8_t data, uint32_t len) {
-    PORTB &= ~maskCs;
-    PORTB |= maskCd;
-    for(uint32_t i = 0; i < len; i++) {
-        for(int8_t bit = 7; bit >= 0; bit--) {
-            PORTB = ((data >> bit) & 0x01) ?
-                (PORTB | maskMosi) :
-                (PORTB & ~maskMosi);
-            PORTB |= maskScl;
-            PORTB &= ~maskScl;
-        }
-    }
-    spiWrite(0x00);
-    PORTB |= maskCs;
-}
-
-void dispSetAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
-    uint16_t x2 = (x1 + w - 1), y2 = (y1 + h - 1);
-    uint8_t dataX[4] = {
-        x1 >> 8, x1 & 0x00FF, x2 >> 8, x2 & 0x00FF
-    };
-    uint8_t dataY[4] = {
-        y1 >> 8, y1 & 0x00FF, y2 >> 8, y2 & 0x00FF
-    };
-    spiSendCommand(ILI_COL_ADDR_SET, dataX, 4);
-    spiSendCommand(ILI_PG_ADDR_SET, dataY, 4);
-    spiSendCommand(ILI_RAM_WRITE);
-}
-
-void spiInit() {
-    maskMosi = 0x01 << PIN_MOSI;
-    maskScl = 0x01 << PIN_SCL;
-    maskCs = 0x01 << PIN_CS;
-    maskCd = 0x01 << PIN_CD;
-
-    DDRB |= maskMosi;
-    DDRB |= maskScl;
-    DDRB |= maskCs;
-    DDRB |= maskCd;
-
-    PORTB |= maskCs;
-    PORTB &= ~maskScl;
-}
-
-void spiSendData16(uint16_t data) {
-    PORTB &= ~maskCs;
-    PORTB |= maskCd;
-    spiWrite(data >> 8);
-    spiWrite(data & 0x00FF);
-    PORTB |= maskCs;
-}
-
-void spiSendData8(uint8_t data) {
-    PORTB &= ~maskCs;
-    PORTB |= maskCd;
-    spiWrite(data);
-    PORTB |= maskCs;
-}
-
-void spiSendCommand(uint8_t cmd, uint8_t *data, uint8_t len) {
-    PORTB &= ~maskCs;
-
-    PORTB &= ~maskCd;
-    spiWrite(cmd);
-
-    PORTB |= maskCd;
-    for(uint8_t i = 0; i < len; i++) {
-        spiWrite(data[i]);
-    }
-
-    PORTB |= maskCs;
-}
-
-void spiSendCommand(uint8_t cmd) {
-    PORTB &= ~maskCs;
-    PORTB &= ~maskCd;
-    spiWrite(cmd);
-    PORTB |= maskCs;
-}
-
-void spiWrite(uint8_t byte) {
-    for(int8_t bit = 7; bit >= 0; bit--) {
-        PORTB = ((byte >> bit) & 0x01) ?
-            (PORTB | maskMosi) :
-            (PORTB & ~maskMosi);
-        PORTB |= maskScl;
-        PORTB &= ~maskScl;
-    }
 }
