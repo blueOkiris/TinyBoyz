@@ -1,115 +1,115 @@
-#define PIN_CD              0
 #define PIN_MOSI            1
 #define PIN_SCL             2
 #define PIN_CS              3
+#define PIN_CD              0
 
-#define CMD_SLPOUT          0x11
-#define CMD_DISPON          0x29
-#define CMD_COL_ADDR_SET    0x2A
-#define CMD_ROW_ADDR_SET    0x2B
-#define CMD_RAMWR           0x2C
-#define CMD_RST             0x01
-#define CMD_MEM_ACC_CTL     0x36
+#define ILI_RST             0x01
+#define ILI_PW_CTL_1        0xC0
+#define ILI_PW_CTL_2        0xC1
+#define ILI_VM_CTL_1        0xC5
+#define ILI_VM_CTL_2        0xC7
+#define ILI_MEM_ACC_CTL     0x36
+#define ILI_V_SC_ZERO       0x37
+#define ILI_PIX_FRMT        0x3A
+#define ILI_FR_CTL_1        0xB1
+#define ILI_D_FUN_CTL       0xB6
+#define ILI_GAMMA_SET       0x26
+#define ILI_GM_CTL_POS_1    0xE0
+#define ILI_GM_CTL_NEG_1    0xE1
+#define ILI_SLP_OUT         0x11
+#define ILI_DISP_ON         0x29
 
-#define MEM_CTL_REV         0x20
-#define MEM_CTL_BGR         0x08
-
-#define BLUE                0x001F
-#define BLACK               0x0000
-#define GREEN               0x07E0
-
-uint8_t maskCommData, maskMosi, maskScl, maskCs;
-uint8_t i;
-const uint16_t screenWidth = 320, screenHeight = 240;
+//#define digitalWrite        delay(1); digitalWrite
 
 void setup() {
-    displayInit();
-    displayFillRect(49, 49, 50, 50, GREEN);
+    dispInit();
 }
 
 void loop() {
-    
+
 }
 
-void displayInit() {
-    spiInit(PIN_CD, PIN_MOSI, PIN_SCL, PIN_CS);
+const uint8_t iliInitCmds[110] = {
+    0xEF, 3, 0x03, 0x80, 0x02,
+    0xCF, 3, 0x00, 0xC1, 0x30,
+    0xED, 4, 0x64, 0x03, 0x12, 0x81,
+    0xE8, 3, 0x85, 0x00, 0x78,
+    0xCB, 5, 0x39, 0x2C, 0x00, 0x34, 0x02,
+    0xF7, 1, 0x20,
+    0xEA, 2, 0x00, 0x00,
+    ILI_PW_CTL_1, 1, 0x23,                  // Power control VRH[5:0]
+    ILI_PW_CTL_2, 1, 0x10,                  // Power control SAP[2:0];BT[3:0]
+    ILI_VM_CTL_1, 2, 0x3e, 0x28,            // VCM control
+    ILI_VM_CTL_2, 1, 0x86,                  // VCM control2
+    ILI_MEM_ACC_CTL, 1, 0x48,               // Memory Access Control
+    ILI_V_SC_ZERO, 1, 0x00,                 // Vertical scroll zero
+    ILI_PIX_FRMT, 1, 0x55,
+    ILI_FR_CTL_1, 2, 0x00, 0x18,
+    ILI_D_FUN_CTL, 3, 0x08, 0x82, 0x27,     // Display Function Control
+    0xF2, 1, 0x00,                          // 3Gamma Function Disable
+    ILI_GAMMA_SET , 1, 0x01,                // Gamma curve selected
+    ILI_GM_CTL_POS_1,                       // Set Gamma Positive
+        15, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10,
+        0x03, 0x0E, 0x09, 0x00,
+    ILI_GM_CTL_NEG_1,                       // Set Gamma Negative
+        15, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F,
+        0x0C, 0x31, 0x36, 0x0F,
+    ILI_SLP_OUT, 0x80,                      // Exit Sleep
+    ILI_DISP_ON, 0x80,                      // Display on
+};
 
-    PORTB &= ~maskCommData;
-    spiFlashByte(CMD_RST);
-    delay(120);
-    spiFlashByte(CMD_SLPOUT);
-    delay(120);
-    spiFlashByte(CMD_DISPON);
+void dispInit() {
+    spiInit();
 
-    spiFlashByte(CMD_MEM_ACC_CTL);
-    PORTB |= maskCommData;
-    spiFlashByte(MEM_CTL_REV | MEM_CTL_BGR);
+    spiSendCommand(ILI_RST);
+    delay(150);
 
-    //displayFillRect(0, 0, screenWidth, screenHeight, BLACK);
-}
-
-void displaySetAddr(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
-    PORTB &= ~maskCommData;
-    spiFlashByte(CMD_COL_ADDR_SET);
-    PORTB |= maskCommData;
-    spiFlashByte(x0 >> 8);
-    spiFlashByte(x0 & 0x00FF);
-    spiFlashByte(x1 >> 8);
-    spiFlashByte(x1 & 0x00FF);
-
-    PORTB &= ~maskCommData;
-    spiFlashByte(CMD_ROW_ADDR_SET);
-    PORTB |= maskCommData;
-    spiFlashByte(y0 >> 8);
-    spiFlashByte(y0 & 0x00FF);
-    spiFlashByte(y1 >> 8);
-    spiFlashByte(y1 & 0x00FF);
-}
-
-void displayFillRect(
-        uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
-    displaySetAddr(x, y, x + w - 1, y + h - 1);
-
-    PORTB &= ~maskCommData;
-    spiFlashByte(CMD_RAMWR);
-    PORTB |= maskCommData;
-    for(y = h; y >= 0; y--) {
-        for(x = w; x >= 0; x++) {
-            spiFlashByte(color >> 8);
-            spiFlashByte(color & 0x00FF);
+    for(uint8_t ind = 0; ind < 110; ind++) {
+        uint8_t cmd = iliInitCmds[ind++];
+        uint8_t numData = iliInitCmds[ind++];
+        spiSendCommand(cmd, iliInitCmds + ind, numData & 0x7F);
+        if(numData & 0x80) {
+            delay(150);
         }
+        ind += (numData & 0x7F) - 1;
     }
-    PORTB |= maskCs;
 }
 
-void spiInit(uint8_t commDataPin, uint8_t mosiPin, uint8_t sclPin, uint8_t csPin) {
-    maskCommData = 1 << commDataPin;
-    maskMosi = 1 << mosiPin;
-    maskScl = 1 << sclPin;
-    maskCs = 1 << csPin;
+void spiInit() {
+    pinMode(PIN_MOSI, OUTPUT);
+    pinMode(PIN_SCL, OUTPUT);
+    pinMode(PIN_CS, OUTPUT);
+    pinMode(PIN_CD, OUTPUT);
 
-    DDRB |= maskCommData;
-    DDRB |= maskMosi;
-    DDRB |= maskScl;
-    DDRB |= maskCs;
-
-    PORTB |= maskCs;
-    PORTB &= ~maskScl;
-    PORTB &= ~maskCommData;
+    digitalWrite(PIN_CS, HIGH);
+    digitalWrite(PIN_SCL, LOW);
 }
 
-void spiFlashByte(uint8_t data) {
-    PORTB &= ~maskCs;
-    for(i = 0; i < 8; i++) {
-        PORTB = ((data >> 7 - i) & 0x01) ?
-            (PORTB | maskMosi) :
-            (PORTB & ~maskMosi);
-        spiPulseClock();
+void spiSendCommand(uint8_t cmd, uint8_t *data, uint8_t len) {
+    digitalWrite(PIN_CS, LOW);
+
+    digitalWrite(PIN_CD, LOW);
+    spiWrite(cmd);
+
+    digitalWrite(PIN_CD, HIGH);
+    for(uint8_t i = 0; i < len; i++) {
+        spiWrite(data[i]);
     }
-    PORTB |= maskCs;
+
+    digitalWrite(PIN_CS, HIGH);
 }
 
-void spiPulseClock() {
-    PORTB |= maskScl;
-    PORTB &= ~maskScl;
+void spiSendCommand(uint8_t cmd) {
+    digitalWrite(PIN_CS, LOW);
+    digitalWrite(PIN_CD, LOW);
+    spiWrite(cmd);
+    digitalWrite(PIN_CS, HIGH);
+}
+
+void spiWrite(uint8_t byte) {
+    for(int8_t bit = 7; bit >= 0; bit--) {
+        digitalWrite(PIN_MOSI, (byte >> bit) & 0x01);
+        digitalWrite(PIN_SCL, HIGH);
+        digitalWrite(PIN_SCL, LOW);
+    }
 }
