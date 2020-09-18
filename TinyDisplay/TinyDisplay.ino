@@ -105,16 +105,25 @@ void dispInit() {
 void dispFillRect(
         uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
     dispSetAddrWindow(x, y, w, h);
-    dispWriteColor(color, (uint32_t) w * h);
+    spiFill16(color, (uint32_t) w * h);
 }
 
-void dispWriteColor(uint16_t color, uint32_t len) {
+void spiFill16(uint16_t data, uint32_t len) {
     PORTB &= ~maskCs;
     PORTB |= maskCd;
     for(uint32_t i = 0; i < len; i++) {
-        //spiSendData16(color);
-        spiWrite(color >> 8);
-        spiWrite(color & 0x00FF);
+        spiWrite(data >> 8);
+        spiWrite(data & 0x00FF);
+    }
+    spiWrite(0x00);
+    PORTB |= maskCs;
+}
+
+void spiFill8(uint8_t data, uint32_t len) {
+    PORTB &= ~maskCs;
+    PORTB |= maskCd;
+    for(uint32_t i = 0; i < len; i++) {
+        spiWrite(data);
     }
     spiWrite(0x00);
     PORTB |= maskCs;
