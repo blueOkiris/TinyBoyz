@@ -18,16 +18,31 @@
 #define ILI_GM_CTL_NEG_1    0xE1
 #define ILI_SLP_OUT         0x11
 #define ILI_DISP_ON         0x29
+#define ILI_COL_ADDR_SET    0x2A
+#define ILI_PG_ADDR_SET     0x2B
+#define ILI_RAM_WRITE       0x2C
+
+#define BLACK       0x0000      //   0,   0,   0
+#define NAVY        0x000F      //   0,   0, 123
+#define DARKGREEN   0x03E0      //   0, 125,   0
+#define DARKCYAN    0x03EF      //   0, 125, 123
+#define MAROON      0x7800      // 123,   0,   0
+#define PURPLE      0x780F      // 123,   0, 123
+#define OLIVE       0x7BE0      // 123, 125,   0
+#define LIGHTGREY   0xC618      // 198, 195, 198
+#define DARKGREY    0x7BEF      // 123, 125, 123
+#define BLUE        0x001F      //   0,   0, 255
+#define GREEN       0x07E0      //   0, 255,   0
+#define CYAN        0x07FF      //   0, 255, 255
+#define RED         0xF800      // 255,   0,   0
+#define MAGENTA     0xF81F      // 255,   0, 255
+#define YELLOW      0xFFE0      // 255, 255,   0
+#define WHITE       0xFFFF      // 255, 255, 255
+#define ORANGE      0xFD20      // 255, 165,   0
+#define GREENYELLOW 0xAFE5      // 173, 255,  41
+#define PINK        0xFC18      // 255, 130, 198
 
 //#define digitalWrite        delay(1); digitalWrite
-
-void setup() {
-    dispInit();
-}
-
-void loop() {
-
-}
 
 const uint8_t iliInitCmds[110] = {
     0xEF, 3, 0x03, 0x80, 0x02,
@@ -41,7 +56,7 @@ const uint8_t iliInitCmds[110] = {
     ILI_PW_CTL_2, 1, 0x10,                  // Power control SAP[2:0];BT[3:0]
     ILI_VM_CTL_1, 2, 0x3e, 0x28,            // VCM control
     ILI_VM_CTL_2, 1, 0x86,                  // VCM control2
-    ILI_MEM_ACC_CTL, 1, 0x48,               // Memory Access Control
+    ILI_MEM_ACC_CTL, 1, 0x20 | 0x08,        // Memory Access Control
     ILI_V_SC_ZERO, 1, 0x00,                 // Vertical scroll zero
     ILI_PIX_FRMT, 1, 0x55,
     ILI_FR_CTL_1, 2, 0x00, 0x18,
@@ -58,6 +73,16 @@ const uint8_t iliInitCmds[110] = {
     ILI_DISP_ON, 0x80,                      // Display on
 };
 
+void setup() {
+    dispInit();
+    dispFillRect(0, 0, 320, 240, BLACK);
+    dispFillRect(50, 50, 50, 50, BLUE);
+}
+
+void loop() {
+
+}
+
 void dispInit() {
     spiInit();
 
@@ -69,10 +94,36 @@ void dispInit() {
         uint8_t numData = iliInitCmds[ind++];
         spiSendCommand(cmd, iliInitCmds + ind, numData & 0x7F);
         if(numData & 0x80) {
-            delay(150);
+            delay(100);
         }
         ind += (numData & 0x7F) - 1;
     }
+}
+
+void dispFillRect(
+        uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
+    dispSetAddrWindow(x, y, w, h);
+    dispWriteColor(color, (uint32_t) w * h);
+}
+
+void dispWriteColor(uint16_t color, uint32_t len) {
+    for(uint32_t i = 0; i < len; i++) {
+        spiSendData16(color);
+    }
+    spiSendData8(0x00);
+}
+
+void dispSetAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
+    uint16_t x2 = (x1 + w - 1), y2 = (y1 + h - 1);
+    uint8_t dataX[4] = {
+        x1 >> 8, x1 & 0x00FF, x2 >> 8, x2 & 0x00FF
+    };
+    uint8_t dataY[4] = {
+        y1 >> 8, y1 & 0x00FF, y2 >> 8, y2 & 0x00FF
+    };
+    spiSendCommand(ILI_COL_ADDR_SET, dataX, 4);
+    spiSendCommand(ILI_PG_ADDR_SET, dataY, 4);
+    spiSendCommand(ILI_RAM_WRITE);
 }
 
 void spiInit() {
@@ -83,6 +134,21 @@ void spiInit() {
 
     digitalWrite(PIN_CS, HIGH);
     digitalWrite(PIN_SCL, LOW);
+}
+
+void spiSendData16(uint16_t data) {
+    digitalWrite(PIN_CS, LOW);
+    digitalWrite(PIN_CD, HIGH);
+    spiWrite(data >> 8);
+    spiWrite(data & 0x00FF);
+    digitalWrite(PIN_CS, HIGH);
+}
+
+void spiSendData8(uint8_t data) {
+    digitalWrite(PIN_CS, LOW);
+    digitalWrite(PIN_CD, HIGH);
+    spiWrite(data);
+    digitalWrite(PIN_CS, HIGH);
 }
 
 void spiSendCommand(uint8_t cmd, uint8_t *data, uint8_t len) {
