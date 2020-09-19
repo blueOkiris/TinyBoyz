@@ -30,4 +30,4 @@ A gameboy-shaped Arduino-based game console made out of parallel processed ATtin
                ---------
 ```
 
-Basically, I use three tinies to get a "fast" parallel interface to a display (more about that in docs/DISPLAY.md). Then I use a tiny to handle SPI to an SD Card and speed up memory access. It will hold a chunk of instructions, pass that in and get the next chunk, then wait for another receive. And then one central tiny to control interpretation and telling the other ones what to do.
+Basically, I use three tinies to get a "fast" parallel interface to a display (more about that in docs/DISPLAY.md). Then I use a tiny to handle SPI to an SD Card and speed up memory access. It will hold a chunk of instructions, pass that in and get the next chunk, then wait for another receive. And then one central tiny to control interpretation and telling the other ones what to do as well as taking input.

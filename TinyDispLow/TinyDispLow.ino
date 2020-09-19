@@ -1,4 +1,4 @@
-#include "../shared/Display.hpp"
+#include "Display.hpp"
 
 void setup() {
     Display::init(Display::TinyDispType::LowAndCtlBits);
