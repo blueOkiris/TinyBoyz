@@ -1,7 +1,7 @@
-#include "Ili9341.hpp"
+#include "../shared/Display.hpp"
 
 void setup() {
-    
+    Display::init(Display::TinyDispType::LowAndCtlBits);
 }
 
 void loop() {
