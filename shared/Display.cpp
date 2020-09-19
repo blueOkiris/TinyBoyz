@@ -6,7 +6,9 @@ using namespace Display;
 static TinyDispType tinyDispId_g;
 
 void Display::init(TinyDispType tinyDispId) {
-    tinyDispId_g = TinyDispType::HighBits;
+    tinyDispId_g = tinyDispId;
+
+    
 }
 
 void Display::setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
