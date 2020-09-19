@@ -1,7 +1,4 @@
-#ifndef _ILI9341_HPP_
-#define _ILI9341_HPP_
-
-#include <Arduino.h>
+#pragma once
 
 #define ILI_RST             0x01
 #define ILI_PW_CTL_1        0xC0
@@ -70,5 +67,3 @@ static const uint8_t iliInitCmds_g[110] = {
     ILI_SLP_OUT, 0x80,                      // Exit Sleep
     ILI_DISP_ON, 0x80,                      // Display on
 };
-
-#endif
