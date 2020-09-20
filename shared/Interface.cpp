@@ -31,9 +31,8 @@ void Parallel::init(Display::TinyDispType tinyDispId) {
 void Parallel::pulseOrWaitClock() {
     if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {
         // Wait for just a handful of steps to make sure all three have written
-        delay(100);
+        delayMicroseconds(1000);
         PORTB |= maskClk;
-        delay(100);
         PORTB &= ~maskClk;
     } else {
         // Wait for clk pulse
