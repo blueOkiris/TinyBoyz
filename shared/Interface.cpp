@@ -31,13 +31,26 @@ void Parallel::init(Display::TinyDispType tinyDispId) {
 void Parallel::pulseOrWaitClock() {
     if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {
         // Wait for just a handful of steps to make sure all three have written
-        delayMicroseconds(1000);
+        delay(100);
         PORTB |= maskClk;
+        delay(100);
         PORTB &= ~maskClk;
     } else {
         // Wait for clk pulse
         while((PINB & maskClk) != 0);                   // To get enough voltage
                                                         // And inverter was used
+    }
+}
+
+void Parallel::setDataMode() {
+    if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {
+        PORTB |= maskDnC;
+    }
+}
+
+void Parallel::setCommandMode() {
+    if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {
+        PORTB &= ~maskDnC;
     }
 }
 
@@ -72,22 +85,12 @@ void Parallel::sendData(uint8_t data) {
 }
 
 void Parallel::sendCommand(uint8_t cmd) {
-    if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {
-        PORTB &= ~maskDnC;
-    }
+    setCommandMode();
     sendData(cmd);
 }
 
-void Parallel::setDataMode() {
-    if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {
-        PORTB |= maskDnC;
-    }
-}
-
 void Parallel::sendCommand(uint8_t cmd, uint8_t *data, uint32_t len) {
-    if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {
-        PORTB &= ~maskDnC;
-    }
+    setCommandMode();
     sendData(cmd);
 
     if(tinyDispId_g == Display::TinyDispType::LowAndCtlBits) {

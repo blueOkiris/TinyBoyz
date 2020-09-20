@@ -11,8 +11,7 @@ void Display::init(TinyDispType tinyDispId) {
     tinyDispId_g = tinyDispId;
     Parallel::init(tinyDispId_g);
 
-    Parallel::sendCommand(0b01010110);
-    /*Parallel::sendCommand(ILI_RST);
+    Parallel::sendCommand(ILI_RST);
     delay(100);
 
     for(uint8_t ind = 0; ind < 110; ind++) {
@@ -23,7 +22,7 @@ void Display::init(TinyDispType tinyDispId) {
             delay(100);
         }
         ind += (numData & 0x7F) - 1;
-    }*/
+    }
 }
 
 void Display::setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
@@ -40,7 +39,7 @@ void Display::setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
 
 void Display::fillRect(
         uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
-    /*setAddrWindow(x, y, w, h);
+    setAddrWindow(x, y, w, h);
 
     Parallel::sendCommand(ILI_RAM_WRITE);
 
@@ -50,7 +49,7 @@ void Display::fillRect(
         Parallel::sendData(color >> 8);
         Parallel::sendData(color & 0x00FF);
     }
-    Parallel::sendData(0x00);*/
+    Parallel::sendData(0x00);
 }
 
 /*
