@@ -9,4 +9,5 @@ namespace Parallel {
     void sendCommand(uint8_t cmd, uint8_t *data, uint32_t len);
     void sendData(uint8_t data);
     void pulseOrWaitClock();
+    void setDataMode();
 }

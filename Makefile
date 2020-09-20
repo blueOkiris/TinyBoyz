@@ -15,7 +15,9 @@ $1 : $1/$1.ino
 	$(foreach file,$(SHARED_FILES),rm $1/$(notdir $(file);))
 
 $1-upload : $1/$1.ino
+	cp shared/* $1/
 	$(ASC) --upload --board $(BOARD) --port $(PORT) $1/$1.ino
+	$(foreach file,$(SHARED_FILES),rm $1/$(notdir $(file);))
 endef
 
 # Targets
