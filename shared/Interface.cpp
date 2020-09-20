@@ -5,8 +5,8 @@ using namespace Parallel;
 
 static Display::TinyDispType tinyDispId_g;
 
-static const uint8_t maskD[3] = { 0x01, 0x02, 0x04 };   // D0, D1, D2
-static const uint8_t maskClk = 0x08;                    // D3
+static const uint8_t maskD[3] = { 0x08, 0x02, 0x04 };   // D3, D1, D2
+static const uint8_t maskClk = 0x01;                    // D0
 static const uint8_t maskDnC = 0x04;                    // D2
 
 void Parallel::init(Display::TinyDispType tinyDispId) {
