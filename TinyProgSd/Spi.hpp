@@ -9,6 +9,7 @@ namespace Spi {
     const uint8_t maskCs = 0x08;            // D3
 
     void init();
-    void sendData(uint8_t *data, uint32_t len);
     void pulseClock();
+    void sendData(uint8_t *data, uint32_t len);
+    void readData(uint8_t *buffer, uint32_t len);
 }

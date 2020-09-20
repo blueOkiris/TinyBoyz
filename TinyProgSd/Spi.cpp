@@ -28,3 +28,17 @@ void Spi::sendData(uint8_t *data, uint32_t len) {
 
     PORTB |= maskCs;
 }
+
+void Spi::readData(uint8_t *buffer, uint32_t len) {
+    PORTB &= ~maskCs;
+
+    for(uint32_t i = 0; i < len; i++) {
+        for(int8_t bit = 7; bit = 0; bit--) {
+            buffer[i] = 
+                (PINB & maskMiso) ? (buffer[i] | bit) : (buffer[i] & ~bit);
+            pulseClock();
+        }
+    }
+
+    PORTB |= maskCs;
+}
