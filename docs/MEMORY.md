@@ -1,8 +1,14 @@
-# TinyBoyz
+# Memory Redesign
 
-A gameboy-shaped Arduino-based game console made out of parallel processed ATtiny85s.
+## Problem with Memory
 
-## Hardware Architecture:
+Whether I end up writing a whol Fat driver for an SD card, or switching to FRAM, there's one big issue with the current design: I can't read data *back* to the Main tiny.
+
+## Redesign 3
+
+I can get around this by adding an Inter-Device communication Tiny. It talks directly over some sort of TWI to the main, and then sends the DAC signal as well as takes a copy of the MISO line back from the Memory, so it can send memory data back to the main tiny.
+
+Here's the redone design:
 
 ```
                                                        --------------------------
@@ -34,5 +40,3 @@ A gameboy-shaped Arduino-based game console made out of parallel processed ATtin
                  | stick |
                  ---------
 ```
-
-Basically, I use three tinies to get a "fast" parallel interface to a display (more about that in docs/DISPLAY.md). Then I use a tiny to handle SPI to an SD Card and speed up memory access. It will hold a chunk of instructions, pass that in and get the next chunk, then wait for another receive. Then I have another tiny which tells the IO ones what to do, and receives data from the SD card. And I have one central tiny to handle input, handle interpretation, and control the IO tiny.
