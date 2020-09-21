@@ -40,3 +40,9 @@ Here's the redone design:
                  | stick |
                  ---------
 ```
+
+## Sd Card vs FRAM
+
+I've got two options and two tradeoffs. Sd Cards make it easy to add programs from my computer, *but* they are really complicated with using a filesystem or even their Spi mode.
+
+However, FRAM is nice and easy to read and write to, yet I can't interface with my computer directly. I'd have to add a port to the device that let's another microcontroller transfer files from a computer, which is kind of lame.
