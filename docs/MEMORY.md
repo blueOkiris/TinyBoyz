@@ -46,3 +46,5 @@ Here's the redone design:
 I've got two options and two tradeoffs. Sd Cards make it easy to add programs from my computer, *but* they are really complicated with using a filesystem or even their Spi mode.
 
 However, FRAM is nice and easy to read and write to, yet I can't interface with my computer directly. I'd have to add a port to the device that let's another microcontroller transfer files from a computer, which is kind of lame.
+
+I think I'll probably go with FRAM and make another project with a Teensy3.2 or something that can act as a usb mass storage device and connect my computer to the FRAM chip. It's unfortunate that it's this difficult to set up, but man Sd Cards are HARD. I won't unless I can get the default Arduino library working with the tiny.
