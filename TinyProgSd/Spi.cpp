@@ -3,42 +3,39 @@
 
 using namespace Spi;
 
+static const uint8_t maskCs = 0x08;     // D3
+static const uint8_t maskMosi = 0x02;   // D1
+static const uint8_t maskMiso = 0x04;   // D2
+static const uint8_t maskSck = 0x01;    // D0
+
+static int8_t bit;
+static uint8_t readData;
+
 void Spi::init() {
-    DDRB = 0x02;                        // MISO as input, else as output
-    PORTB &= ~maskClk;
-    PORTB |= maskCs;
+    DDRB = 0xFF & (~maskMiso);                  // Just miso as input
+    PORTB |= maskCs;                            // Set cs to high by default
+    PORTB |= maskSck;                           // Set clk to high by default
 }
 
-void Spi::pulseClock() {
-    PORTB |= maskClk;
-    PORTB &= ~maskClk;
-}
+uint8_t Spi::transfer(uint8_t data) {
+    readData = 0;
 
-void Spi::sendData(uint8_t *data, uint32_t len) {
-    PORTB &= ~maskCs;
-
-    for(uint32_t i = 0; i < len; i++) {
-        for(int8_t bit = 7; bit >= 0; bit--) {
-            PORTB = ((data[i] >> bit) & 0x01) ?
-                (PORTB | maskMosi) :
-                (PORTB & ~maskMosi);
-            pulseClock();
-        }
+    for(bit = 7; bit >= 0; bit--) {
+        PORTB = ((data >> bit) & 0x01) ?        // Set to data
+            (PORTB | maskMosi) :
+            (PORTB & ~maskMosi);
+        readData = ((PINB & maskMiso) != 0) ?   // Read on MISO
+            (readData | (0x01 << bit)) :
+            (readData & ~(0x01 << bit));
     }
 
-    PORTB |= maskCs;
+    return readData;
 }
 
-void Spi::readData(uint8_t *buffer, uint32_t len) {
+void Spi::select() {
     PORTB &= ~maskCs;
+}
 
-    for(uint32_t i = 0; i < len; i++) {
-        for(int8_t bit = 7; bit = 0; bit--) {
-            buffer[i] = 
-                (PINB & maskMiso) ? (buffer[i] | bit) : (buffer[i] & ~bit);
-            pulseClock();
-        }
-    }
-
+void Spi::deselect() {
     PORTB |= maskCs;
 }

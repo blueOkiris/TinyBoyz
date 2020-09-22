@@ -32,7 +32,7 @@ $(foreach sketch,$(SKETCHES), $(eval $(call make-project-target,$(sketch))))
 clean :
 	$(foreach sketch,$(SKETCHES),\
 		$(foreach file,$(SHARED_FILES),\
-			rm $(sketch)/$(notdir $(file));\
+			rm -rf $(sketch)/$(notdir $(file));\
 		)\
 	)
 
