@@ -57,8 +57,13 @@ typedef struct {
     uint32_t file_size;
 } __attribute((packed)) Fat16Entry;
 
+extern uint8_t fileBuffer[32];
+
 namespace Fat16 {
     bool init();
     void seek(uint32_t offset);
     void read(uint16_t len);
+    bool openFile(char *fileName, char *ext);
+    void readFile(uint8_t len = 32);
+    bool eof();
 }

@@ -4,11 +4,13 @@
 
 int16_t i;
 
-static uint8_t buffer[32];
 static Fat16State state;
+uint8_t fileBuffer[32];
 #define FAT16_BOOT_OFFSET   11
-#define FAT16_part          ((PartitionTable *) ((void *) buffer))
-#define FAT16_boot          ((Fat16BootSectorFragment *) ((void *) buffer))
+#define FAT16_part          ((PartitionTable *) ((void *) fileBuffer))
+#define FAT16_boot          ((Fat16BootSectorFragment *) ((void *) fileBuffer))
+#define FAT16_entry         ((Fat16Entry *) ((void *) fileBuffer))
+#define FAT16_ushort        ((uint16_t *) ((void *) fileBuffer))
 
 static uint32_t sector;
 static uint16_t pos;
@@ -66,11 +68,90 @@ void Fat16::seek(uint32_t offset) {
 }
 
 void Fat16::read(uint16_t len) {
-    SdCard::read(sector, pos, buffer, len);
+    SdCard::read(sector, pos, fileBuffer, len);
     pos += len;
 
     if(pos == 512) {
         pos = 0;
         sector++;
     }
+}
+
+bool Fat16::openFile(char *fileName, char *ext) {
+    do {
+        readFile(sizeof(Fat16Entry));
+        for(i = 0; i < 8; i++) {
+            if(FAT16_entry->filename[i] != fileName[i]) {
+                break;
+            }
+        }
+        if(i < 8) {
+            continue;                                   // File lookup failed
+        }
+
+        for(i = 0; i < 3; i++) {
+            if(FAT16_entry->ext[i] != ext[i]) {
+                break;
+            }
+        }
+        if(i < 3) {
+            continue;
+        }
+
+        state.cluster = FAT16_entry->starting_cluster;
+        state.cluster_left = (uint32_t) state.sectors_per_cluster * 512;
+
+        if(FAT16_entry->filename[0] == 0x2E
+                || FAT16_entry->attributes & 0x10) {
+            state.file_left = 0xFFFFFFF;
+        } else {
+            state.file_left = FAT16_entry->file_size;
+        }
+
+        seek(
+            state.data_start + (uint32_t) (state.cluster - 2)
+            * (uint32_t) state.sectors_per_cluster * 512
+        );
+        return true;
+    } while(state.file_left);
+
+    return false;
+}
+
+void Fat16::readFile(uint8_t len) {
+    if(state.file_left == 0) {
+        return 0;
+    }
+
+    if(state.cluster_left == 0) {
+        seek(state.fat_start + (uint32_t) state.cluster * 2);
+        read(2);
+
+        state.cluster = FAT16_ushort[0];
+        state.cluster_left = (uint32_t) state.sectors_per_cluster * 512;
+
+        if(state.cluster == 0xFFFF) {
+            state.file_left = 0;
+            return;
+        }
+
+        seek(
+            state.data_start + (uint32_t) (state.cluster - 2)
+            * (uint32_t) state.sectors_per_cluster * 512
+        );
+    }
+
+    if(len > state.file_left) {
+        len = state.file_left;
+    }
+    if(len > state.cluster_left) {
+        len = state.cluster_left;
+    }
+    read(len);
+    state.file_left -= len;
+    state.cluster_left -= len;
+}
+
+bool Fat16::eof() {
+    return state.file_left == 0;
 }
