@@ -4,9 +4,9 @@
 
 namespace Ili9341Parallel {
     enum class Board {
-        HighBits,
-        MidBits,
-        LowAndCtlBits,
+        HighTiny,
+        MidTiny,
+        LowAndCtlTiny,
         Uno
     };
     
