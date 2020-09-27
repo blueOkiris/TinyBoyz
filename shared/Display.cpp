@@ -72,6 +72,10 @@ void Ili9341Parallel::reset() {
             digitalWrite(pinUnoReset, HIGH);
             pinMode(pinUnoReset, OUTPUT);
             
+            digitalWrite(pinUnoReset, LOW);
+            delay(2);
+            digitalWrite(pinUnoReset, HIGH);
+            
             digitalWrite(pinUnoCs, LOW);
             digitalWrite(pinUnoRs, LOW);
             writeByte(0x00);
