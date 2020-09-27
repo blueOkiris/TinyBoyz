@@ -1,53 +1,212 @@
 #include <Arduino.h>
 #include "Ili9341.hpp"
-#include "Interface.hpp"
 #include "Display.hpp"
 
-using namespace Display;
+using namespace Ili9341Parallel;
 
-static TinyDispType tinyDispId_g;
+static Board dispId_g;
 
-void Display::init(TinyDispType tinyDispId) {
-    tinyDispId_g = tinyDispId;
-    Parallel::init(tinyDispId_g);
+static const uint8_t pinUnoRd = A0;
+static const uint8_t pinUnoWr = A1;
+static const uint8_t pinUnoRs = A2;
+static const uint8_t pinUnoCs = A3;
+static const uint8_t pinUnoReset = A4;
+static const uint8_t unoPinsData[8] = { 8, 9, 2, 3, 4, 5, 6, 7 };
 
-    Parallel::sendCommand(ILI_RST);
-    delay(100);
-
-    for(uint8_t ind = 0; ind < 110; ind++) {
-        uint8_t cmd = iliInitCmds_g[ind++];
-        uint8_t numData = iliInitCmds_g[ind++];
-        Parallel::sendCommand(cmd, iliInitCmds_g + ind, numData & 0x7F);
-        if(numData & 0x80) {
-            delay(100);
-        }
-        ind += (numData & 0x7F) - 1;
+void Ili9341Parallel::writeByte(uint8_t data) {
+    switch(dispId_g) {
+        case Board::Uno:
+            for(int8_t pin = 0; pin < 8; pin++) {
+                digitalWrite(unoPinsData[pin], (data >> pin) & 0x01);
+            }
+            digitalWrite(pinUnoWr, LOW);
+            digitalWrite(pinUnoWr, HIGH);
+            break;
     }
 }
 
-void Display::setAddrWindow(uint16_t x1, uint16_t y1, uint16_t w, uint16_t h) {
-    uint16_t x2 = (x1 + w - 1), y2 = (y1 + h - 1);
-    uint8_t dataX[4] = {
-        x1 >> 8, x1 & 0x00FF, x2 >> 8, x2 & 0x00FF
-    };
-    uint8_t dataY[4] = {
-        y1 >> 8, y1 & 0x00FF, y2 >> 8, y2 & 0x00FF
-    };
-    Parallel::sendCommand(ILI_COL_ADDR_SET, dataX, 4);
-    Parallel::sendCommand(ILI_PG_ADDR_SET, dataY, 4);
+void Ili9341Parallel::writeRegByte(uint8_t cmd, uint8_t data) {
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoRs, LOW);
+            writeByte(cmd);
+            digitalWrite(pinUnoRs, HIGH);
+            writeByte(data);
+            break;
+    }
 }
 
-void Display::fillRect(
+void Ili9341Parallel::writeRegShort(uint16_t cmd, uint16_t data) {
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoRs, LOW);
+            writeByte(cmd >> 8);
+            writeByte(cmd);
+            digitalWrite(pinUnoRs, HIGH);
+            writeByte(data >> 8);
+            writeByte(data);
+            break;
+    }
+}
+
+void Ili9341Parallel::writeRegLong(uint8_t cmd, uint32_t data) {
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoRs, LOW);
+            writeByte(cmd);
+            digitalWrite(pinUnoRs, HIGH);
+            writeByte(data >> 24);
+            writeByte(data >> 16);
+            writeByte(data >> 8);
+            writeByte(data);
+            break;
+    }
+}
+
+void Ili9341Parallel::reset() {
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoCs, HIGH);
+            digitalWrite(pinUnoWr, HIGH);
+            digitalWrite(pinUnoRd, HIGH);
+            digitalWrite(pinUnoReset, HIGH);
+            pinMode(pinUnoReset, OUTPUT);
+            
+            digitalWrite(pinUnoCs, LOW);
+            digitalWrite(pinUnoRs, LOW);
+            writeByte(0x00);
+            for(int8_t i = 0; i < 3; i++) {
+                digitalWrite(pinUnoWr, LOW);
+                digitalWrite(pinUnoWr, HIGH);
+            }
+            digitalWrite(pinUnoCs, HIGH);
+            break;
+    }
+}
+
+void Ili9341Parallel::begin() {
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoCs, LOW);
+            
+            writeRegByte(ILI_SOFT_RST, 0);
+            delay(50);
+            writeRegByte(ILI_DISP_OFF, 0);
+            
+            writeRegByte(ILI_PWR_CTL_1, 0x23);
+            writeRegByte(ILI_PWR_CTL_2, 0x10);
+            writeRegShort(ILI_V_COM_CTL_1, 0x2B2B);
+            writeRegByte(ILI_V_COM_CTL_2, 0xC0);
+            writeRegByte(ILI_MEM_CTL, ILI_MAD_CTL_MY | ILI_MAD_CTL_BGR);
+            writeRegByte(ILI_PXL_FRMT, 0x55);
+            writeRegShort(ILI_FRAME_CTL, 0x001B);
+            
+            writeRegByte(ILI_ENTRY_MODE, 0x07);
+            
+            writeRegByte(ILI_SLEEP_OUT, 0);
+            delay(150);
+            writeRegByte(ILI_DISP_ON, 0);
+            delay(500);
+            break;
+    }
+}
+
+void Ili9341Parallel::init(Board dispId) {
+    dispId_g = dispId;
+    
+    switch(dispId_g) {
+        case Board::Uno:
+            pinMode(pinUnoCs, OUTPUT);
+            pinMode(pinUnoRs, OUTPUT);
+            pinMode(pinUnoWr, OUTPUT);
+            pinMode(pinUnoRd, OUTPUT);
+            for(int8_t pin = 0; pin < 8; pin++) {
+                pinMode(unoPinsData[pin], OUTPUT);
+            }
+            
+            reset();
+            delay(200);
+            
+            begin();
+            break;
+    }
+}
+
+void Ili9341Parallel::setAddrWindow(
+        uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoCs, LOW);
+            break;
+    }
+    
+    uint32_t col = x1;
+    col <<= 16;
+    col |= x2;
+    
+    uint32_t page = y1;
+    page <<= 16;
+    page |= y2;
+    
+    writeRegLong(ILI_COL_ADDR_SET, col);
+    writeRegLong(ILI_PAGE_ADDR_SET, col);
+    
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoCs, HIGH);
+            break;
+    }
+}
+
+void Ili9341Parallel::flood(uint16_t color, uint32_t len) {
+    uint16_t blocks;
+    uint8_t i, high = color >> 8, low = color;
+    
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoCs, LOW);
+            digitalWrite(pinUnoRs, LOW);
+            break;
+    }
+    writeByte(0x2C);
+    
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoRs, HIGH);
+            break;
+    }
+    writeByte(high);
+    writeByte(low);
+    len--;
+    
+    blocks = (uint16_t) (len / 64);
+    while(blocks--) {
+        i = 16;
+        do {
+            writeByte(high);
+            writeByte(low);
+            writeByte(high);
+            writeByte(low);
+            writeByte(high);
+            writeByte(low);
+            writeByte(high);
+            writeByte(low);
+        } while(--i);
+        for (i = (uint8_t) len & 63; i--;) {
+            writeByte(high);
+            writeByte(low);
+        }
+    }
+    
+    switch(dispId_g) {
+        case Board::Uno:
+            digitalWrite(pinUnoCs, HIGH);
+            break;
+    }
+}
+
+void Ili9341Parallel::fillRect(
         uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
     setAddrWindow(x, y, w, h);
-
-    Parallel::sendCommand(ILI_RAM_WRITE);
-
-    Parallel::setDataMode();
-    uint32_t len = static_cast<uint32_t>(w) * static_cast<uint32_t>(h);
-    for(uint32_t i = 0; i < 5; i++) {
-        Parallel::sendData(color >> 8);
-        Parallel::sendData(color & 0x00FF);
-    }
-    Parallel::sendData(0x00);
+    flood(color, (uint32_t) w * (uint32_t) h);
 }

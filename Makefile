@@ -1,6 +1,11 @@
 # Build options
-SKETCHES :=        TinyMain TinyDispHigh TinyDispMid TinyDispLow TinyProgSd
-BOARD :=           attiny:avr:ATtinyX5:cpu=attiny85,clock=internal16
+SKETCHES :=        TinyMain TinyDispHigh TinyDispMid TinyDispLow TinyProgSd \
+                   UnoGfx
+ifdef UNO
+	BOARD :=       arduino:avr:uno
+else
+	BOARD :=       attiny:avr:ATtinyX5:cpu=attiny85,clock=internal16
+endif
 BOARD_NAME =       $(subst :,.,$(BOARD))
 PORT :=            /dev/ttyACM0
 ASC :=             arduino
