@@ -1,13 +1,17 @@
 # Build options
 SKETCHES :=        TinyMain TinyDispHigh TinyDispMid TinyDispLow TinyProgSd \
-                   UnoGfx
+                   UnoGfx UnoWatcher
 ifdef UNO
 	BOARD :=       arduino:avr:uno
 else
 	BOARD :=       attiny:avr:ATtinyX5:cpu=attiny85,clock=internal16
 endif
 BOARD_NAME =       $(subst :,.,$(BOARD))
+ifdef OTHER
+PORT :=            /dev/ttyACM1
+else
 PORT :=            /dev/ttyACM0
+endif
 ASC :=             arduino
 SHARED_FILES :=    $(wildcard shared/*)
 

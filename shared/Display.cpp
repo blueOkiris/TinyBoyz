@@ -8,8 +8,8 @@ static Board dispId_g;
 
 static const uint8_t maskTinyWr = 0x01;
 static const uint8_t maskTinyRs = 0x02;
-static const uint8_t maskTinyLowData = 0x06;
 static const uint8_t maskTinyHighMidData = 0x0E;
+static const uint8_t maskTinyLowData = 0x0C;
 
 #if defined(__AVR_ATmega328P__)
 static const uint8_t pinUnoRd = A0;
@@ -37,19 +37,26 @@ void Ili9341Parallel::writeByte(uint8_t data) {
             break;
         
         case Board::HighTiny:
-            PORTB = (data >> 5) & maskTinyHighMidData;
-            while((PINB & maskTinyWr) != 0); // Wait for low on clock
+            // Map 7, 6, 5 to 3, 2, 1 (not 2, 1, 0)
+            // Note that clock is inverted from expected
+            PORTB |= (data >> 4) & maskTinyHighMidData;
+            while((PINB & maskTinyWr) == 0); // Wait for low on clock
             break;
         
         case Board::MidTiny:
-            PORTB = (data >> 2) & maskTinyHighMidData;
-            while((PINB & maskTinyWr) != 0); // Wait for low on clock
+            // Map 4, 3, 2 to 3, 2, 1 (not 2, 1, 0)
+            // Note that clock is inverted from expected
+            PORTB |= (data >> 1) & maskTinyHighMidData;
+            while((PINB & maskTinyWr) == 0); // Wait for low on clock
             break;
         
         case Board::LowAndCtlTiny:
-            PORTB = data & maskTinyLowData;
+            // Map 1, 0 to 3, 2
+            PORTB |= (data << 2) & maskTinyLowData;
             PORTB &= ~maskTinyWr;
+            delay(1000);
             PORTB |= maskTinyWr;
+            delay(1000);
             break;
     }
 }
@@ -198,6 +205,48 @@ void Ili9341Parallel::begin() {
     delay(500);
 }
 
+/*
+ * Expected initialization bytes should be:
+ * Data,    0x00 - 0b 000 000 00
+ * Data,    0x00 - 0b 000 000 00
+ * Data,    0x00 - 0b 000 000 00
+ * Data,    0x00 - 0b 000 000 00
+ * 
+ * Command, 0x01 - 0b 000 000 01
+ * Data,    0x00 - 0b 000 000 00
+ * 
+ * Command, 0x28 - 0b 001 010 00
+ * Data,    0x00 - 0b 000 000 00
+ * 
+ * Command, 0xC0 - 0b 110 000 00
+ * Data,    0x23 - 0b 001 000 11
+ * 
+ * Command, 0xC1 - 0b 110 000 01
+ * Data,    0x10 - 0b 000 100 00
+ * 
+ * Command, 0x00 - 0b 000 000 00
+ * Command, 0xC5 - 0b 110 001 01
+ * Data,    0x2B - 0b 001 010 11
+ * Data,    0x2B - 0b 001 010 11
+ * 
+ * Command, 0x36 - 0b 001 101 10
+ * Data,    0x88 - 0b 100 010 00
+ * 
+ * Command, 0x3A - 0b 001 110 10
+ * Data,    0x55 - 0b 010 101 01
+ * 
+ * Command, 0x00 - 0b 000 000 00
+ * Command, 0xB1 - 0b 101 100 01
+ * Data,    0x00 - 0b 000 000 00
+ * Data,    0xB1 - 0b 101 100 01
+ * 
+ * Command, 0x11 - 0b 000 100 01
+ * Data,    0x00 - 0b 000 000 00
+ * 
+ * Command, 0x29 - 0b 001 010 01
+ * Data,    0x00 - 0b 000 000 00
+ * 
+ */
 void Ili9341Parallel::init(Board dispId) {
     dispId_g = dispId;
     
